@@ -12,7 +12,7 @@ export default async function (fastify: FastifyInstance) {
   }
 
   fastify.post('/register', async (request, reply) => {
-    const { username, password } = request.body as any
+    const { username, password , firstname , lastname } = request.body as User
 
     try {
         // Check if user exists
@@ -30,8 +30,12 @@ export default async function (fastify: FastifyInstance) {
         const hashedPassword = await bcrypt.hash(password, 10)
         const user = userRepository.create({
             username,
-            password: hashedPassword
+            password: hashedPassword,
+            firstname : firstname,
+            lastname : lastname
         })
+
+        console.log(user)
         
         await userRepository.save(user)
         reply.code(200).send({ 

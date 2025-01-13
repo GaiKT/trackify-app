@@ -1,14 +1,11 @@
-/** @type {import('ts-jest').JestConfigWithTsJest} */
+/** @type {import('ts-jest').JestConfigWithTsJest} **/
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'node',
-  setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
-  testMatch: ['**/*.test.ts'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
-  },
+  testEnvironment: "node",
   transform: {
-    '^.+\\.ts?$': 'ts-jest',
+    "^.+.tsx?$": ["ts-jest",{}],
   },
-  testTimeout: 10000
-}
+  roots: ['<rootDir>/src'], // Ensure Jest scans the correct directory
+  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(test).ts'], // Match test files
+};
+

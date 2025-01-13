@@ -1,7 +1,8 @@
 import { DataSource } from 'typeorm';
+import { User } from '../entity/User';
+import { Account } from '../entity/Account';
 import dotenv from 'dotenv';
 import 'reflect-metadata';
-import { User } from '../entity/User';
 
 dotenv.config();
 
@@ -14,24 +15,7 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_NAME,
     synchronize: true,
     logging: false,
-    entities: [User] ,
+    entities: [User, Account],
     subscribers: [],
     migrations: [],
 });
-
-AppDataSource.initialize()
-  .then(async () => {
-    console.log("Connection initialized with database...");
-  })
-  .catch((error) => console.log(error));
-
-export const getDataSource = (delay = 3000): Promise<DataSource> => {
-  if (AppDataSource.isInitialized) return Promise.resolve(AppDataSource);
-
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (AppDataSource.isInitialized) resolve(AppDataSource);
-      else reject("Failed to create connection with database");
-    }, delay);
-  });
-};
