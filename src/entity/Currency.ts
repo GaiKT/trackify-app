@@ -3,27 +3,27 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Up
 @Entity()
 export class Currency {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column({
         nullable: false,
         unique: true,
     })
-    currency_name : string;
+    currency_name! : string;
 
     @Column({
         nullable: false,
         unique: true,
     })
-    currency_code : string;
+    currency_code! : string;
 
     @CreateDateColumn({
         nullable: false,
     })
-    created_at: Date;
+    created_at!: Date;
 
     @UpdateDateColumn({
         nullable: false,
     })
-    updated_at: Date;
+    updated_at!: Date;
 }

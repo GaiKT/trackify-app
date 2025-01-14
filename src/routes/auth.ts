@@ -89,3 +89,4 @@ export default async function (fastify: FastifyInstance) {
     reply.send(user)
   })
 }
+

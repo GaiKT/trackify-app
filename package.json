@@ -15,13 +15,17 @@
   "dependencies": {
     "@fastify/auth": "^5.0.2",
     "@fastify/jwt": "^9.0.3",
+    "@types/bad-words": "^3.0.3",
     "@types/bcrypt": "^5.0.2",
     "@types/pg": "^8.11.10",
+    "bad-words": "^4.0.0",
+    "badwords-list": "^2.0.1-4",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
     "nodemon": "^3.1.9",
     "pg": "^8.13.1",
+    "profanity-filter": "^0.2.1",
     "reflect-metadata": "^0.2.2",
     "typeorm": "^0.3.20",
     "typeorm-fastify-plugin": "^3.0.0"
