@@ -69,7 +69,7 @@ export default async function (fastify: FastifyInstance) {
     })
   })
 
-  fastify.delete('/users/:id', async (request, reply) => {
+  fastify.delete('/users/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as IParams
     const user = await userRepository.findOne({
       where: { id }
