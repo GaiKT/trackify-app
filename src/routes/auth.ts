@@ -1,18 +1,19 @@
 import { FastifyInstance } from 'fastify';
-import { User } from '../entity/User'
+import { User } from '../entity/User';
 import bcrypt from 'bcrypt'
-import { AppDataSource } from '../utils/database';
+import { getDataSource } from '../database';
 
 export default async function (fastify: FastifyInstance) {
   
-  const userRepository = AppDataSource.getRepository(User)
+  const AppDataSource = await getDataSource();
+  const userRepository = AppDataSource.getRepository(User);
 
   interface IParams {
     id: string
   }
 
   fastify.post('/register', async (request, reply) => {
-    const { username, password , firstname , lastname } = request.body as User
+    const { username, password , firstname , lastname } = request.body as any
 
     try {
         // Check if user exists
@@ -34,8 +35,6 @@ export default async function (fastify: FastifyInstance) {
             firstname : firstname,
             lastname : lastname
         })
-
-        console.log(user)
         
         await userRepository.save(user)
         reply.code(200).send({ 

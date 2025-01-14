@@ -1,8 +1,7 @@
 import { buildTest } from '../helper';
-import { AppDataSource } from '../utils/database';
+import { AppDataSource } from '../database';
 import { Account } from '../entity/Account';
 import { User } from '../entity/User';
-import 'reflect-metadata';
 
 describe('Account Routes', () => {
     const app = buildTest();

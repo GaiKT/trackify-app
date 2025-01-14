@@ -1,5 +1,5 @@
 'use strict'
-
+import 'reflect-metadata'
 import fastify from 'fastify'
 import authPlugin from './plugin/auth'
 import authRoutes from './routes/auth'

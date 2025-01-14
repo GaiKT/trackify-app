@@ -1,6 +1,5 @@
-import 'reflect-metadata';
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Account } from './Account';
+import { Account } from './Account';                                                                                                
 
 @Entity()
 export class User {

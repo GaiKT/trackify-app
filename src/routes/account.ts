@@ -2,10 +2,12 @@ import { FastifyInstance } from 'fastify';
 import { Account } from '../entity/Account';
 import { User } from '../entity/User';
 import bcrypt from 'bcrypt';
-import { AppDataSource } from '../utils/database';
+import { getDataSource } from '../database';
 
 export default async function (fastify: FastifyInstance) {
+    const AppDataSource = await getDataSource();
     const accountRepository = AppDataSource.getRepository(Account);
+    const userRepository = AppDataSource.getRepository(User);
 
     interface IAccount {
         name: string;
@@ -24,7 +26,7 @@ export default async function (fastify: FastifyInstance) {
 
         const hashAccountNumber = await bcrypt.hash(accountNumber, 10);
 
-        const findUser = await AppDataSource.getRepository(User).findOne({ where: { id: user_id } });
+        const findUser = await userRepository.findOne({ where: { id: user_id } });
 
         if (!findUser) {
             return reply.code(404).send({ message: 'User not found' });

@@ -1,8 +1,7 @@
 import { buildTest } from '../helper';
-import { AppDataSource } from '../utils/database';
+import { AppDataSource } from '../database';
 import { User } from '../entity/User';
 import bcrypt from 'bcrypt';
-import 'reflect-metadata';
 
 describe('Auth Routes', () => {
   const app = buildTest();
@@ -64,42 +63,67 @@ describe('Auth Routes', () => {
     expect(response.json().message).toBe('Username already exists');
   });
 
-  // describe('POST /auth/login', () => {
-  //       it('should login a user', async () => {
-  //       const user = new User()
-  //       user.username = 'test'
-  //       user.password = bcrypt.hashSync('password', 10)
-  //       await userRepository.save(user)
+  it('should login a user', async () => {
+    const user = new User();
+    user.username = 'test';
+    user.password = bcrypt.hashSync('password', 10);
+    user.firstname = 'Test';
+    user.lastname = 'User';
+    await userRepository.save(user);
 
-  //       const token = app.jwt.sign({ id: user.id })
-        
-  //       const response = await supertest(app.server)
-  //           .post('/auth/login')
-  //           .send({ username: 'test', password: 'password' })
-  //           .expect(200)
-  //       console.log(response.body)
-  //       expect(response.body).toEqual({message : 'Login successful' , token : token})})
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: {
+        username: 'test',
+        password: 'password',
+      },
+    });
 
-  //       it('should not login a user with invalid credentials', async () => {
-  //       const user = new User()
-  //       user.username = 'test'
-  //       user.password = bcrypt.hashSync('password', 10)
-  //       await userRepository.save(user)
+    expect(response.statusCode).toBe(200);
+    expect(response.json().message).toBe('Login successful');
+  });
 
-  //       const response = await supertest(app.server)
-  //           .post('/auth/login')
-  //           .send({ username: 'test', password: 'wrongpassword' })
-  //           .expect(401)
-  //       expect(response.body.message).toBe('Invalid credentials')
-  //       })
+  it('should not login a user with wrong password', async () => {
+    const user = new User();
+    user.username = 'test';
+    user.password = bcrypt.hashSync('password', 10);
+    user.firstname = 'Test';
+    user.lastname = 'User';
+    await userRepository.save(user);
 
-  //       it('should not login a user that does not exist', async () => {
-  //       const response = await supertest(app.server)
-  //           .post('/auth/login')
-  //           .send({ username: 'test', password: 'password' })
-  //           .expect(401)
-  //       expect(response.body.message).toBe('Invalid credentials')
-  //       })
-    
-  // })
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: {
+        username: 'test',
+        password: 'password12',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toBe('Invalid username or password');
+  });
+
+  it('should not login a user with wrong username', async () => {
+    const user = new User();
+    user.username = 'test';
+    user.password = bcrypt.hashSync('password', 10);
+    user.firstname = 'Test';
+    user.lastname = 'User';
+    await userRepository.save(user);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: {
+        username: 'test1',
+        password: 'password',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toBe('Invalid username or password');
+  });
+
 });
