@@ -34,7 +34,7 @@ export default async function (fastify: FastifyInstance) {
 
 
     // Create transaction
-    fastify.post('/create', async (request, reply) => {
+    fastify.post('/create',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         try {
             const { transaction_name, amount, description, account_id, currency_id, category_id, payment_type ,transaction_slip_url } = request.body as ITransaction;
             
@@ -97,7 +97,7 @@ export default async function (fastify: FastifyInstance) {
     }
 
     // Get all transactions with user id
-    fastify.get<{ Querystring: PaginationQuery; Params: { id: string } }>('/all/:id', async (request, reply) => {
+    fastify.get<{ Querystring: PaginationQuery; Params: { id: string } }>('/all/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { page = 1, limit = 10 } = request.query;
         const { id } = request.params;
     
@@ -165,7 +165,7 @@ export default async function (fastify: FastifyInstance) {
     
 
     // Get transaction by id
-    fastify.get('/get/:id', async (request, reply) => {
+    fastify.get('/get/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as IParams;
 
         try {
@@ -191,7 +191,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Delete transaction
-    fastify.delete('/delete/:id', async (request, reply) => {
+    fastify.delete('/delete/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as IParams;
 
         const transaction = await transactionRepository.findOne({ where: { id } });

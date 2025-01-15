@@ -15,7 +15,7 @@ export default async function (fastify: FastifyInstance) {
     }
 
     // Create category
-    fastify.post('/create', async (request, reply) => {
+    fastify.post('/create', { preValidation: [fastify.authenticate] },async (request, reply) => {
         const { category_name } = request.body as ICategory;
 
         try {
@@ -34,7 +34,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Get all categories
-    fastify.get('/all', async (request, reply) => {
+    fastify.get('/all', { preValidation: [fastify.authenticate] },async (request, reply) => {
         try {
             const categories = await categoryRepository.find();
 
@@ -49,7 +49,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Get category by id
-    fastify.get('/get/:id', async (request, reply) => {
+    fastify.get('/get/:id', { preValidation: [fastify.authenticate] },async (request, reply) => {
         const { id } = request.params as IParams;
 
         try {
@@ -70,7 +70,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Update category
-    fastify.put('/update/:id', async (request, reply) => {
+    fastify.put('/update/:id', { preValidation: [fastify.authenticate] },async (request, reply) => {
         const { id } = request.params as IParams;
         const { category_name } = request.body as ICategory;
 
