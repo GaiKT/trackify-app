@@ -1,18 +1,19 @@
 import { FastifyInstance } from 'fastify';
-import { User } from '../entity/User'
+import { User } from '../entity/User';
 import bcrypt from 'bcrypt'
-import { AppDataSource } from '../utils/database';
+import { getDataSource } from '../database';
 
 export default async function (fastify: FastifyInstance) {
   
-  const userRepository = AppDataSource.getRepository(User)
+  const AppDataSource = await getDataSource();
+  const userRepository = AppDataSource.getRepository(User);
 
   interface IParams {
     id: string
   }
 
   fastify.post('/register', async (request, reply) => {
-    const { username, password } = request.body as any
+    const { username, password , firstname , lastname } = request.body as any
 
     try {
         // Check if user exists
@@ -30,7 +31,9 @@ export default async function (fastify: FastifyInstance) {
         const hashedPassword = await bcrypt.hash(password, 10)
         const user = userRepository.create({
             username,
-            password: hashedPassword
+            password: hashedPassword,
+            firstname : firstname,
+            lastname : lastname
         })
         
         await userRepository.save(user)
@@ -59,14 +62,14 @@ export default async function (fastify: FastifyInstance) {
       return
     }
 
-    const token = fastify.jwt.sign({ id : user.id })
+    const token = fastify.jwt.sign({ id : user.id },{ expiresIn: "200000"})
     reply.send({ 
         message: 'Login successful',
         token: token 
     })
   })
 
-  fastify.delete('/users/:id', async (request, reply) => {
+  fastify.delete('/users/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as IParams
     const user = await userRepository.findOne({
       where: { id }
@@ -86,3 +89,4 @@ export default async function (fastify: FastifyInstance) {
     reply.send(user)
   })
 }
+
