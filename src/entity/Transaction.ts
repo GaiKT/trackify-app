@@ -10,6 +10,7 @@ export class Transaction {
 
     @Column({
         nullable: false,
+        unique: false
     })
     transaction_name!: string;
 
@@ -30,6 +31,7 @@ export class Transaction {
 
     @Column({
         nullable: true,
+        unique : false
     })
     transaction_slip_url?: string;
 
@@ -37,11 +39,11 @@ export class Transaction {
     @JoinColumn()
     account!: Account;
 
-    @OneToOne(() => Category)
+    @ManyToOne(() => Category , (category) => category.transactions)
     @JoinColumn()
     category!: Category
     
-    @OneToOne(() => Currency)
+    @ManyToOne(() => Currency , (currency) => currency.transactions)
     @JoinColumn()
     currency!: Currency
 

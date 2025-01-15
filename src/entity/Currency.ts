@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Transaction } from './Transaction';
 
 @Entity()
 export class Currency {
@@ -16,6 +17,9 @@ export class Currency {
         unique: true,
     })
     currency_code! : string;
+
+    @OneToMany(() => Transaction, (transaction) => transaction.currency)
+    transactions!: Transaction[];
 
     @CreateDateColumn({
         nullable: false,

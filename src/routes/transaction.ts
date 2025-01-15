@@ -19,7 +19,7 @@ export default async function (fastify: FastifyInstance) {
     interface ITransaction {
         transaction_name: string;
         amount: number;
-        transaction_slip_url: string;
+        transaction_slip_url?: string;
         payment_type: string;
         description: string;
         account_id: string;
@@ -31,111 +31,138 @@ export default async function (fastify: FastifyInstance) {
         id: string;
     }
 
+
+
     // Create transaction
     fastify.post('/create', async (request, reply) => {
-        const { transaction_name ,amount, description, account_id, currency_id, category_id , payment_type , transaction_slip_url } = request.body as ITransaction;
-
-        if (!transaction_name || !amount || !description || !account_id || !currency_id || !category_id || !payment_type || !transaction_slip_url) {
-            return reply.code(400).send({ message: 'All fields are required' });
-        }
-
         try {
-            // find account
-            const account = await accountRepository.findOne({ where : { id : account_id } });
-
-            if (!account) {
-                reply.code(404).send({ 
-                    message: 'Account not found' 
-                });
-                return;
+            const { transaction_name, amount, description, account_id, currency_id, category_id, payment_type ,transaction_slip_url } = request.body as ITransaction;
+            
+            // Validation
+            if (!transaction_name || !amount || !description || !account_id || !currency_id || !category_id || !payment_type) {
+                return reply.code(400).send({ message: 'All fields are required' });
             }
-
-            // find currency
-            const currency = await currencyRepository.findOne({ where : { id : currency_id } });
-
-            if (!currency) {
-                reply.code(404).send({ 
-                    message: 'Currency not found' 
-                });
-                return;
-            }
-
-            // find category
-            const category = await categoryRepository.findOne({ where : { id : category_id } });
-
-            if (!category) {
-                reply.code(404).send({ 
-                    message: 'Category not found' 
-                });
-                return;
-            }
-
-            if( payment_type === 'income'){
-                account.balance += amount;
-            }else{
-                if( account.balance < amount ){
-                    return reply.code(400).send({ 
-                        message: 'Insufficient funds' 
-                    });
-                }else{
-                    account.balance -= amount;
-                }
-            }
-
-        
+    
             const transaction = new Transaction();
             transaction.transaction_name = transaction_name;
             transaction.amount = amount;
             transaction.payment_type = payment_type as PaymentType;
             transaction.description = description;
             transaction.transaction_slip_url = transaction_slip_url;
+
+    
+            const [account, currency, category] = await Promise.all([
+                accountRepository.findOne({ where: { id: account_id } }),
+                currencyRepository.findOne({ where: { id: currency_id } }),
+                categoryRepository.findOne({ where: { id: category_id } })
+            ]);
+    
+            if (!account || !currency || !category) {
+                return reply.code(404).send({ 
+                    message: 'Account, Currency or Category not found' 
+                });
+            }
+
+            // amount calculate
+            if(transaction.payment_type == PaymentType.EXPENSE){
+                account.balance -= amount;
+                await accountRepository.save(account);
+            }else{
+                account.balance += amount;
+                await accountRepository.save(account);
+            }
+    
             transaction.account = account;
             transaction.currency = currency;
             transaction.category = category;
+    
             await transactionRepository.save(transaction);
-
-            reply.code(200).send({ 
-                message: 'Transaction created successfully' 
+            
+            reply.code(201).send({ 
+                message: 'Transaction created successfully'
             });
         } catch (error) {
+            console.error('Transaction creation error:', error);
             reply.code(500).send({ 
-                message: 'Internal server error: ' + error
+                message: 'Error creating transaction',
+                error: error instanceof Error ? error.message : 'Unknown error'
             });
         }
     });
 
-    // Get all transactions with user id
-    fastify.get('/all/:id', async (request, reply) => {
-        const { id } = request.params as any;
+    interface PaginationQuery {
+        page?: number;
+        limit?: number;
+        id: string;
+    }
 
+    // Get all transactions with user id
+    fastify.get<{ Querystring: PaginationQuery; Params: { id: string } }>('/all/:id', async (request, reply) => {
+        const { page = 1, limit = 10 } = request.query;
+        const { id } = request.params;
+    
+        const skip = (page - 1) * limit;
+    
         if (!id) {
             return reply.code(400).send({ message: 'User id is required' });
         }
-
+    
         try {
-            const user = await userRepository.findOne({ 
+            const user = await userRepository.findOne({
                 where: { id },
+                select: {
+                    id: true,
+                    username: true,
+                    account: {
+                        id: true,
+                        name: true,
+                        transactions: {
+                            id: true,
+                            transaction_name: true,
+                            amount: true,
+                            payment_type: true,
+                            description: true,
+                            transaction_slip_url: true,
+                            created_at: true,
+                            currency: {
+                                currency_code: true,
+                            },
+                            category: {
+                                category_name: true,
+                            },
+                        },
+                    },
+                },
                 relations: {
                     account: {
                         transactions: {
                             currency: true,
                             category: true,
-                        }
-                    }
-                }
+                            account: true,
+                        },
+                    },
+                },
             });
-
+    
             if (!user) {
                 return reply.code(404).send({ message: 'User not found' });
             }
-
-            const transactions = user.account.flatMap(account => account.transactions);
-
-            return reply.code(200).send(transactions);
+    
+            const transactions = user.account.flatMap((account) => account.transactions);
+    
+            const paginatedTransactions = transactions.slice(skip, skip + limit);
+    
+            return reply.code(200).send({
+                transactions: paginatedTransactions,
+                totalItems: transactions.length,
+                totalPages: Math.ceil(transactions.length / limit),
+                currentPage: page,
+            });
         } catch (error) {
             reply.code(500).send({ message: 'Internal server error: ' + error});
         }
     });
+    
 
     // Get transaction by id
     fastify.get('/get/:id', async (request, reply) => {
