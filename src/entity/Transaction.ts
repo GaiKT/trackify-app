@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne , JoinColumn , OneToOne } from 'typeorm';
 import { Category } from './Category';
 import { Currency } from './Currency';
 import { Account } from './Account';
@@ -6,58 +6,59 @@ import { Account } from './Account';
 @Entity()
 export class Transaction {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column({
         nullable: false,
+        unique: false
     })
-    transaction_name : string;
+    transaction_name!: string;
 
     @Column({
         nullable: true,
     })
-    description ? : string;
+    description?: string;
 
     @Column({
         nullable: false,
     })
-    amount: number;
+    amount!: number;
 
     @Column({
         nullable: false,
-        default: 'expense',
     })
-    payment_type: PaymentType;
+    payment_type!: PaymentType;
+
+    @Column({
+        nullable: true,
+        unique : false
+    })
+    transaction_slip_url?: string;
 
     @ManyToOne(() => Account, (account) => account.transactions)
     @JoinColumn()
-    account: Account;
+    account!: Account;
 
-    @OneToOne(() => Category)
+    @ManyToOne(() => Category , (category) => category.transactions)
     @JoinColumn()
-    category: Category
+    category!: Category
     
-    @OneToOne(() => Currency)
+    @ManyToOne(() => Currency , (currency) => currency.transactions)
     @JoinColumn()
-    currency: Currency
-
-    @Column({
-        nullable: true,
-    })
-    transaction_slip_url ? : string;
+    currency!: Currency
 
     @CreateDateColumn({
         nullable: false,
     })
-    created_at: Date;
+    created_at!: Date;
 
     @UpdateDateColumn({
         nullable: false,
     })
-    updated_at: Date;
+    updated_at!: Date;
 }
 
 export enum PaymentType {
     INCOME = 'income',
-    EXPENSE = 'expense',
+    EXPENSE = 'expense'
 }

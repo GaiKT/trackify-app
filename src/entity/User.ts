@@ -4,28 +4,28 @@ import { Account } from './Account';
 @Entity()
 export class User {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column({
         nullable: false,
         length: 100,
     })
-    username: string;
+    username!: string;
 
     @Column({
         nullable: false,
     })
-    password: string;
+    password!: string;
 
     @Column({
         nullable: false,
     })
-    firstname: string;
+    firstname!: string;
 
     @Column({
         nullable: false,
     })
-    lastname: string;
+    lastname!: string;
 
     @Column({
         default: 'active',
@@ -33,15 +33,15 @@ export class User {
     status?: string;
 
     @OneToMany(() => Account, (account) => account.user_id)
-    account: Account[];
+    account!: Account[];
 
     @CreateDateColumn({
         nullable: false,
     })
-    created_at: Date;
+    created_at!: Date;
 
     @UpdateDateColumn({
         nullable: false,
     })
-    updated_at: Date;
+    updated_at!: Date;
 }
