@@ -21,7 +21,7 @@ export default async function (fastify: FastifyInstance) {
     }
 
     // Create account
-    fastify.post('/create', async (request, reply) => {
+    fastify.post('/create',{ preValidation: [fastify.authenticate] },  async (request, reply) => {
         const { name, accountNumber, user_id, balance } = request.body as IAccount;
 
         const hashAccountNumber = await bcrypt.hash(accountNumber, 10);
@@ -59,7 +59,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Get all accounts
-    fastify.get('/all-account/:id', async (request, reply) => {
+    fastify.get('/all-account/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as IParams;
         const account = await accountRepository.find({
             where: { user_id : {
@@ -79,7 +79,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Get account by id
-    fastify.get('/:id', async (request, reply) => {
+    fastify.get('/:id', { preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as IParams;
         const account = await accountRepository.findOne({ where: { id }, relations: ['user_id'] });
 
@@ -92,7 +92,7 @@ export default async function (fastify: FastifyInstance) {
     });
     
     // Update account
-    fastify.put('/update/:id', async (request, reply) => {
+    fastify.put('/update/:id', { preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as IParams;
         const { name, accountNumber, balance } = request.body as IAccount;
         
@@ -112,7 +112,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Delete account
-    fastify.delete('/delete/:id', async (request, reply) => {
+    fastify.delete('/delete/:id', { preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as IParams;
         const account = await accountRepository.findOne({ where: { id } });
 

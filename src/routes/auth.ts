@@ -84,7 +84,7 @@ export default async function (fastify: FastifyInstance) {
     reply.send({ message: 'User deleted successfully' })
   })
 
-  fastify.get('/users', async (request, reply) => {
+  fastify.get('/users', { preValidation: [fastify.authenticate] }, async (request, reply) => {
     const user = await userRepository.find()
     reply.send(user)
   })

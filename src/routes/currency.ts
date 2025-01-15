@@ -16,7 +16,7 @@ export default async function (fastify: FastifyInstance) {
     }
 
     // Create currency
-    fastify.post('/create', async (request, reply) => {
+    fastify.post('/create',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { currency_name, currency_code } = request.body as ICurrency;
 
         try {
@@ -37,7 +37,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Get all currencies
-    fastify.get('/all', async (request, reply) => {
+    fastify.get('/all',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         try {
             const currencies = await currencyRepository.find();
 
@@ -52,7 +52,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Get currency by id
-    fastify.get('/get/:id', async (request, reply) => {
+    fastify.get('/get/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as IParams;
 
         try {
@@ -73,7 +73,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Update currency
-    fastify.put('/update/:id', async (request, reply) => {
+    fastify.put('/update/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as IParams;
         const { currency_name, currency_code } = request.body as ICurrency;
 
@@ -101,7 +101,7 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Delete currency
-    fastify.delete('/delete/:id', async (request, reply) => {
+    fastify.delete('/delete/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as IParams;
 
         const currency = await currencyRepository.findOne({ where: { id } });

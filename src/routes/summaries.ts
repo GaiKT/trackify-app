@@ -18,7 +18,7 @@ export default async function (fastify: FastifyInstance) {
   const transactionRepository = AppDataSource.getRepository(Transaction);
 
   // Daily Summary
-  fastify.get('/daily/:userId/:date', async (request, reply) => {
+  fastify.get('/daily/:userId/:date',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
     const { userId, date } = request.params as { userId: string, date: string };
     const startDate = new Date(date);
     startDate.setHours(0,0,0,0);
@@ -29,7 +29,7 @@ export default async function (fastify: FastifyInstance) {
   });
 
   // Monthly Summary
-  fastify.get('/monthly/:userId/:year/:month', async (request, reply) => {
+  fastify.get('/monthly/:userId/:year/:month',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
     const { userId, year, month } = request.params as { userId: string, year: string, month: string };
     const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
     const endDate = new Date(parseInt(year), parseInt(month), 0);
@@ -38,7 +38,7 @@ export default async function (fastify: FastifyInstance) {
   });
 
   // Yearly Summary
-  fastify.get('/yearly/:userId/:year', async (request, reply) => {
+  fastify.get('/yearly/:userId/:year',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
     const { userId, year } = request.params as { userId: string, year: string };
     const startDate = new Date(parseInt(year), 0, 1);
     const endDate = new Date(parseInt(year), 11, 31);
@@ -47,7 +47,7 @@ export default async function (fastify: FastifyInstance) {
   });
 
   // Custom Range Summary
-  fastify.get('/range/:userId', async (request, reply) => {
+  fastify.get('/range/:userId',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
     const { userId } = request.params as { userId: string };
     const { startDate, endDate } = request.query as { startDate: string, endDate: string };
 
