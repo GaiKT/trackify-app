@@ -20,6 +20,12 @@ export default async function (fastify: FastifyInstance) {
         id: string;
     }
 
+    interface PaginationQuery {
+        page?: number;
+        limit?: number;
+        search?: string;
+    }
+
     // Create account
     fastify.post('/create',{ preValidation: [fastify.authenticate] },  async (request, reply) => {
         const { name, accountNumber, user_id, balance } = request.body as IAccount;
@@ -57,26 +63,50 @@ export default async function (fastify: FastifyInstance) {
             });
         }
     });
-
-    // Get all accounts
-    fastify.get('/all-account/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
-        const { id } = request.params as IParams;
-        const account = await accountRepository.find({
-            where: { user_id : {
-                id : id
-            } },
-            relations: {
-                user_id: true,
-            },
-        });
-
-        if (!account) {
-            reply.code(404).send({ message: 'Account not found' });
-            return;
+    
+    // Get all accounts with pagination and search
+    fastify.get<{ Querystring: PaginationQuery; Params: { id: string } }>(
+        '/all-account/:id',
+        { preValidation: [fastify.authenticate] }, 
+        async (request, reply) => {
+            const { id } = request.params;
+            const { page = 1, limit = 10, search = '' } = request.query;
+            const skip = (page - 1) * limit;
+    
+            try {
+                const queryBuilder = accountRepository
+                    .createQueryBuilder('account')
+                    .leftJoinAndSelect('account.user_id', 'user')
+                    .where('user.id = :userId', { userId: id });
+    
+                if (search) {
+                    queryBuilder.andWhere(
+                        'account.name ILIKE :search',
+                        { search: `%${search}%` }
+                    );
+                }
+    
+                const [accounts, total] = await queryBuilder
+                    .orderBy('account.created_at', 'DESC')
+                    .skip(skip)
+                    .take(limit)
+                    .getManyAndCount();
+    
+                return reply.code(200).send({
+                    accounts,
+                    totalItems: total,
+                    totalPages: Math.ceil(total / limit),
+                    currentPage: page
+                });
+            } catch (error) {
+                console.error('Account fetch error:', error);
+                reply.code(500).send({
+                    message: 'Failed to fetch accounts',
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                });
+            }
         }
-
-        reply.code(200).send(account);
-    });
+    );
 
     // Get account by id
     fastify.get('/:id', { preValidation: [fastify.authenticate] }, async (request, reply) => {

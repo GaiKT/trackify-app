@@ -15,6 +15,12 @@ export default async function (fastify: FastifyInstance) {
         id: string;
     }
 
+    interface PaginationQuery {
+        page?: number;
+        limit?: number;
+        search?: string;
+    }
+
     // Create currency
     fastify.post('/create',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
         const { currency_name, currency_code } = request.body as ICurrency;
@@ -37,14 +43,37 @@ export default async function (fastify: FastifyInstance) {
     });
 
     // Get all currencies
-    fastify.get('/all',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
+    fastify.get<{ Querystring: PaginationQuery }>('/all',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
+        
+        const { page = 1, limit = 10, search = '' } = request.query;
+        const skip = (page - 1) * limit;
+
         try {
-            const currencies = await currencyRepository.find();
+            const queryBuilder = currencyRepository
+            .createQueryBuilder('currency');
+
+            if (search) {
+                queryBuilder.where(
+                    'currency.currency_name ILIKE :search OR currency.currency_code ILIKE :search',
+                    { search: `%${search}%` }
+                );
+            }
+
+            const [currencies, total] = await queryBuilder
+            .orderBy('currency.currency_name', 'ASC')
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount();
 
             reply.code(200).send({ 
-                data: currencies
+                data: currencies,
+                totalItems: total,
+                totalPages: Math.ceil(total / limit),
+                currentPage: page
             });
+
         } catch (error) {
+            console.log(error);
             reply.code(500).send({ 
                 message: 'Internal server error: ' + error
             });

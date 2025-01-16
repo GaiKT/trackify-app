@@ -5,8 +5,7 @@ import { Account } from "../entity/Account";
 import { Currency } from "../entity/Currency";
 import { Category } from "../entity/Category";
 import { PaymentType } from "../entity/Transaction";
-import { User } from "../entity/User";
-
+import { BadWordFilter } from "../utils/badwordFilter";
 
 export default async function (fastify: FastifyInstance) {
     const AppDataSource = await getDataSource();
@@ -14,7 +13,8 @@ export default async function (fastify: FastifyInstance) {
     const accountRepository = AppDataSource.getRepository(Account);
     const currencyRepository = AppDataSource.getRepository(Currency);
     const categoryRepository = AppDataSource.getRepository(Category);
-    const userRepository = AppDataSource.getRepository(User);
+
+    const wordFilter = new BadWordFilter();
 
     interface ITransaction {
         transaction_name: string;
@@ -34,20 +34,26 @@ export default async function (fastify: FastifyInstance) {
 
 
     // Create transaction
-    fastify.post('/create',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
+    fastify.post('/create',
+        { preValidation: [fastify.authenticate] }, 
+        async (request, reply) => {
         try {
             const { transaction_name, amount, description, account_id, currency_id, category_id, payment_type ,transaction_slip_url } = request.body as ITransaction;
-            
+            let transactionNameCleaned = wordFilter.clean(transaction_name);
+            let descriptionCleaned = wordFilter.clean(description);
+
+            console.log(transactionNameCleaned , descriptionCleaned);
+
             // Validation
             if (!transaction_name || !amount || !description || !account_id || !currency_id || !category_id || !payment_type) {
                 return reply.code(400).send({ message: 'All fields are required' });
             }
     
             const transaction = new Transaction();
-            transaction.transaction_name = transaction_name;
+            transaction.transaction_name = transactionNameCleaned;
             transaction.amount = amount;
             transaction.payment_type = payment_type as PaymentType;
-            transaction.description = description;
+            transaction.description = descriptionCleaned;
             transaction.transaction_slip_url = transaction_slip_url;
 
     
@@ -63,7 +69,15 @@ export default async function (fastify: FastifyInstance) {
                 });
             }
 
-            // amount calculate
+            // amount checking
+            if(transaction.amount <= account.balance ){
+                return reply.code(400).send({ 
+                    message: "Insufficient balance"
+                });
+
+            }
+
+            // Update account balance
             if(transaction.payment_type == PaymentType.EXPENSE){
                 account.balance -= amount;
                 await accountRepository.save(account);
@@ -93,75 +107,59 @@ export default async function (fastify: FastifyInstance) {
     interface PaginationQuery {
         page?: number;
         limit?: number;
+        search?: string;
         id: string;
     }
 
     // Get all transactions with user id
-    fastify.get<{ Querystring: PaginationQuery; Params: { id: string } }>('/all/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
-        const { page = 1, limit = 10 } = request.query;
-        const { id } = request.params;
-    
-        const skip = (page - 1) * limit;
-    
-        if (!id) {
-            return reply.code(400).send({ message: 'User id is required' });
-        }
-    
-        try {
-            const user = await userRepository.findOne({
-                where: { id },
-                select: {
-                    id: true,
-                    username: true,
-                    account: {
-                        id: true,
-                        name: true,
-                        transactions: {
-                            id: true,
-                            transaction_name: true,
-                            amount: true,
-                            payment_type: true,
-                            description: true,
-                            transaction_slip_url: true,
-                            created_at: true,
-                            currency: {
-                                currency_code: true,
-                            },
-                            category: {
-                                category_name: true,
-                            },
-                        },
-                    },
-                },
-                relations: {
-                    account: {
-                        transactions: {
-                            currency: true,
-                            category: true,
-                            account: true,
-                        },
-                    },
-                },
-            });
-    
-            if (!user) {
-                return reply.code(404).send({ message: 'User not found' });
+    fastify.get<{ Querystring: PaginationQuery; Params: { id: string } }>(
+        '/all/:id',
+        { preValidation: [fastify.authenticate] },
+        async (request, reply) => {
+          const { page = 1, limit = 10, search = '' } = request.query;
+          const { id } = request.params;
+          const skip = (page - 1) * limit;
+      
+          try {
+            const queryBuilder = transactionRepository
+              .createQueryBuilder('transaction')
+              .leftJoinAndSelect('transaction.account', 'account')
+              .leftJoinAndSelect('transaction.currency', 'currency')
+              .leftJoinAndSelect('transaction.category', 'category')
+              .where('account.user_id = :userId', { userId: id });
+      
+            if (search) {
+              queryBuilder.andWhere(
+                '(transaction.transaction_name ILIKE :search OR ' +
+                'transaction.description ILIKE :search OR ' +
+                'account.name ILIKE :search OR ' +
+                'currency.currency_code ILIKE :search OR ' +
+                'category.category_name ILIKE :search)',
+                { search: `%${search}%` }
+              );
             }
-    
-            const transactions = user.account.flatMap((account) => account.transactions);
-    
-            const paginatedTransactions = transactions.slice(skip, skip + limit);
-    
+      
+            const [transactions, total] = await queryBuilder
+              .orderBy('transaction.created_at', 'DESC')
+              .skip(skip)
+              .take(limit)
+              .getManyAndCount();
+      
             return reply.code(200).send({
-                transactions: paginatedTransactions,
-                totalItems: transactions.length,
-                totalPages: Math.ceil(transactions.length / limit),
-                currentPage: page,
+              transactions,
+              totalItems: total,
+              totalPages: Math.ceil(total / limit),
+              currentPage: page,
             });
-        } catch (error) {
-            reply.code(500).send({ message: 'Internal server error: ' + error});
+          } catch (error) {
+            console.error('Transaction fetch error:', error);
+            reply.code(500).send({ 
+              message: 'Failed to fetch transactions',
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
         }
-    });
+      );
     
 
     // Get transaction by id
@@ -189,6 +187,33 @@ export default async function (fastify: FastifyInstance) {
             });
         }
     });
+
+    // Update transaction only slip
+    fastify.put('/update/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
+        const { id } = request.params as IParams;
+        const { transaction_slip_url } = request.body as ITransaction;
+
+        const transaction = await transactionRepository.findOne({ where: { id } });
+
+        if (!transaction) {
+            reply.code(404).send({ message: 'Transaction not found' });
+            return;
+        }
+
+        try {
+            transaction.transaction_slip_url = transaction_slip_url;
+            await transactionRepository.save(transaction);
+
+            reply.code(200).send({ 
+                message: 'Transaction slip updated successfully' 
+            });
+        } catch (error) {
+            reply.code(500).send({ 
+                message: 'Internal server error: ' + error
+            });
+        }
+    });
+
 
     // Delete transaction
     fastify.delete('/delete/:id',{ preValidation: [fastify.authenticate] }, async (request, reply) => {
